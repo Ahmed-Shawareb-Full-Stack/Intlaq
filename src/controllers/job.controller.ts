@@ -31,8 +31,8 @@ export const searchJobs = async (req: AuthRequest, res: Response) => {
 
     if (languages) {
       const langs = (languages as string).split(',');
-      query += ` AND jp.job_id IN (
-        SELECT job_id FROM job_posting_programming_language jpl
+      query += ` AND jp.job_posting_id IN (
+        SELECT job_posting_id FROM job_posting_programming_language jpl
         JOIN programming_languages pl ON jpl.language_id = pl.language_id
         WHERE pl.name = ANY($${values.length + 1}::text[])
       )`;
@@ -54,9 +54,9 @@ export const searchJobs = async (req: AuthRequest, res: Response) => {
       values.push(`%${keywords}%`);
     }
 
-    query += ` ORDER BY jp.job_id DESC LIMIT $${values.length + 1} OFFSET $${
-      values.length + 2
-    }`;
+    query += ` ORDER BY jp.job_posting_id DESC LIMIT $${
+      values.length + 1
+    } OFFSET $${values.length + 2}`;
     values.push(limit, offset);
 
     const result = await pool.query(query, values);

@@ -1,4 +1,4 @@
-interface User {
+export interface User {
   user_id: string;
   name: string;
   type: 'EMPLOYER' | 'EMPLOYEE';

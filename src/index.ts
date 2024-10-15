@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes';
 import jobRoutes from './routes/jobRoutes';
 import profileRoutes from './routes/profileRoutes';
+import applicationRoutes from './routes/applicationRoutes';
 
 dotenv.config();
 
@@ -13,6 +14,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/profiles', profileRoutes);
+app.use('/api/applications', applicationRoutes);
 app.use(
   (
     err: any,

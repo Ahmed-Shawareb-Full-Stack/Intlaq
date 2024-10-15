@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import pool from '../utils/db';
+import { User } from '../models/user';
 
 dotenv.config();
 
