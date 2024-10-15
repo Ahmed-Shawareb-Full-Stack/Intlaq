@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import pool from '../utils/db';
 
 dotenv.config();
 
-interface AuthRequest extends Request {
-  user?: any;
+export interface AuthRequest extends Request {
+  user?: User;
 }
 
 export const authenticateJWT = (
@@ -17,14 +18,36 @@ export const authenticateJWT = (
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.sendStatus(403).json({ message: 'Unauthorized' });
+    res.sendStatus(403).json({ message: 'Unauthorized' });
+    return;
   }
 
-  jwt.verify(token, process.env.JWT_SECRET as string, (err, user) => {
+  jwt.verify(token, process.env.JWT_SECRET as string, async (err, data) => {
     if (err) {
-      return res.sendStatus(403).json({ message: 'Unauthorized' });
+      res.sendStatus(403).json({ message: 'Unauthorized' });
+      return;
+    }
+    const userResult = await pool.query(
+      'SELECT * FROM users WHERE user_id = $1',
+      [data]
+    );
+    const user = userResult.rows[0];
+
+    if (!user) {
+      res.status(400).json({ message: 'Invalid credentials' });
+      return;
     }
     req.user = user;
     next();
   });
+};
+
+export const authorizeRoles = (...roles: ('EMPLOYER' | 'EMPLOYEE')[]) => {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user || !roles.includes(req.user.type)) {
+      res.sendStatus(403);
+      return;
+    }
+    next();
+  };
 };
