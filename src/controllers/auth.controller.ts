@@ -96,22 +96,46 @@ export const registerEmployee = async (
 
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
+    const userId = Ulid.generate().toRaw();
+
     const employeeId = Ulid.generate().toRaw();
+
+    log([userId, name, 'EMPLOYEE', email, hashedPassword]);
+
+    const emailCheckResult = await client.query(
+      'SELECT COUNT(email) FROM users WHERE email = $1',
+      [email]
+    );
+
+    if (parseInt(emailCheckResult.rows[0].count) > 0) {
+      res.status(400).json({ message: 'Email already exists' });
+      return;
+    }
+
+    const userResult = await client.query(
+      `INSERT INTO users
+        (user_id, name, type, email, hashed_password)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING user_id`,
+      [userId, name, 'EMPLOYEE', email, hashedPassword]
+    );
+
+    const user_id = userResult.rows[0].user_id;
 
     log([
       employeeId,
       national_id,
       name,
       address_id,
-      email,
       bio,
       experience_level,
-      hashedPassword,
+      0,
+      user_id,
     ]);
 
     const employeeResult = await client.query(
       `INSERT INTO employee 
-        (employee_id, national_id, name, address_id, email, bio, experience_level, hashed_password)
+        (employee_id, national_id, name, address_id, bio, experience_level, profile_views, user_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
        RETURNING employee_id`,
       [
@@ -119,10 +143,10 @@ export const registerEmployee = async (
         national_id,
         name,
         address_id,
-        email,
         bio,
         experience_level,
-        hashedPassword,
+        0,
+        user_id,
       ]
     );
 
@@ -158,24 +182,36 @@ export const loginEmployee = async (
   const { email, password } = req.body;
 
   try {
-    const result = await pool.query('SELECT * FROM employee WHERE email = $1', [
-      email,
-    ]);
-    const employee = result.rows[0];
+    const userResult = await pool.query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
+    );
+    const user = userResult.rows[0];
 
-    if (!employee) {
+    if (!user) {
       res.status(400).json({ message: 'Invalid credentials' });
       return;
     }
 
-    const match = await bcrypt.compare(password, employee.hashed_password);
+    const match = await bcrypt.compare(password, user.hashed_password);
     if (!match) {
       res.status(400).json({ message: 'Invalid credentials' });
       return;
     }
 
+    const employeeResult = await pool.query(
+      'SELECT * FROM employee WHERE user_id = $1',
+      [user.user_id]
+    );
+    const employee = employeeResult.rows[0];
+
+    if (!employee) {
+      res.status(400).json({ message: 'Employee not found' });
+      return;
+    }
+
     const token = jwt.sign(
-      { employee_id: employee.employee_id },
+      { user_id: employee.user_id },
       process.env.JWT_SECRET as string,
       { expiresIn: '30d' }
     );
