@@ -14,7 +14,8 @@ export const searchProfiles = async (req: AuthRequest, res: Response) => {
   const userType = req.user?.type;
 
   if (userType !== 'EMPLOYER') {
-    return res.status(403).json({ message: 'Access denied' });
+    res.status(403).json({ message: 'Access denied' });
+    return;
   }
 
   try {
