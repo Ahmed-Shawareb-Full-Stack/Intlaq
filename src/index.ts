@@ -4,12 +4,18 @@ import authRoutes from './routes/authRoutes';
 import jobRoutes from './routes/jobRoutes';
 import profileRoutes from './routes/profileRoutes';
 import applicationRoutes from './routes/applicationRoutes';
+const cors = require('cors');
 
 dotenv.config();
 
 const app = express();
 
 app.use(express.json());
+app.use(
+  cors({
+    origin: '*',
+  })
+);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/jobs', jobRoutes);

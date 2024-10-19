@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import pool from '../utils/db';
 import { User } from '../models/user';
+import { log } from 'console';
 
 dotenv.config();
 
@@ -23,24 +24,29 @@ export const authenticateJWT = (
     return;
   }
 
-  jwt.verify(token, process.env.JWT_SECRET as string, async (err, data) => {
-    if (err) {
-      res.sendStatus(403).json({ message: 'Unauthorized' });
-      return;
-    }
-    const userResult = await pool.query(
-      'SELECT * FROM users WHERE user_id = $1',
-      [data]
-    );
-    const user = userResult.rows[0];
+  jwt.verify(
+    token,
+    process.env.JWT_SECRET as string,
+    async (err, data: any) => {
+      log(data);
+      if (err) {
+        res.sendStatus(403).json({ message: 'Unauthorized' });
+        return;
+      }
+      const userResult = await pool.query(
+        'SELECT * FROM "user" WHERE user_id = $1',
+        [data?.user_id]
+      );
+      const user = userResult.rows[0];
 
-    if (!user) {
-      res.status(400).json({ message: 'Invalid credentials' });
-      return;
+      if (!user) {
+        res.status(400).json({ message: 'Invalid credentials' });
+        return;
+      }
+      req.user = user;
+      next();
     }
-    req.user = user;
-    next();
-  });
+  );
 };
 
 export const authorizeRoles = (...roles: ('EMPLOYER' | 'EMPLOYEE')[]) => {

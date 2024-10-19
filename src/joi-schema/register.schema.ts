@@ -12,6 +12,8 @@ export const registrationSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(8).required(),
   bio: Joi.string().optional(),
-  experience_level: Joi.string().valid('Junior', 'Mid', 'Senior').required(),
+  experience_level: Joi.string()
+    .valid('JUNIOR', 'MID-SENIOR', 'SENIOR', 'TEAM-LEAD')
+    .required(),
   programming_languages: Joi.array().items(Joi.number()).required(),
 });

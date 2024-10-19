@@ -1,6 +1,8 @@
 import express from 'express';
 import {
   applyForJob,
+  listEmployeeApplications,
+  listJobApplications,
   manageApplication,
 } from '../controllers/application.controller';
 import { authenticateJWT, authorizeRoles } from '../middleware/auth';
@@ -19,6 +21,20 @@ router.put(
   authenticateJWT,
   authorizeRoles('EMPLOYER'),
   manageApplication
+);
+
+router.get(
+  '/:job_id',
+  authenticateJWT,
+  authorizeRoles('EMPLOYER'),
+  listJobApplications
+);
+
+router.get(
+  '/',
+  authenticateJWT,
+  authorizeRoles('EMPLOYEE'),
+  listEmployeeApplications
 );
 
 export default router;

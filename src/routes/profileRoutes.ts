@@ -9,6 +9,7 @@ router.get(
   authorizeRoles('EMPLOYEE', 'EMPLOYER'),
   getProfile
 );
+
 router.get(
   '/search',
   authenticateJWT,

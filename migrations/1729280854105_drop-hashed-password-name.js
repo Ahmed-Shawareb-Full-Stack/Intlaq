@@ -9,15 +9,7 @@ exports.shorthands = undefined;
  * @returns {Promise<void> | void}
  */
 exports.up = (pgm) => {
-  pgm.addColumn('address', {
-    country_id: {
-      type: 'integer',
-      references: 'country(country_id)',
-      onDelete: 'SET NULL',
-    },
-  });
-
-  pgm.createIndex('address', 'country_id');
+  pgm.dropColumns('employee', ['hashed_password']);
 };
 
 /**
@@ -26,6 +18,7 @@ exports.up = (pgm) => {
  * @returns {Promise<void> | void}
  */
 exports.down = (pgm) => {
-  pgm.dropIndex('address', 'country_id');
-  pgm.dropColumn('address', 'country_id');
+  pgm.addColumns('employee', {
+    hashed_password: { type: 'text', notNull: true },
+  });
 };
