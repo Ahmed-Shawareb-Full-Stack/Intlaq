@@ -2,6 +2,7 @@ import { Response } from 'express';
 import client from '../utils/db';
 import { AuthRequest } from '../middleware/auth';
 import pool from '../utils/db';
+import { log } from 'console';
 
 export interface Job {
   job_posting_id: string;
@@ -37,6 +38,15 @@ export const listAllJobs = async (req: AuthRequest, res: Response) => {
   }
 
   try {
+    const employeeResult = await pool.query(
+      'SELECT * FROM employee WHERE user_id = $1',
+      [user.user_id]
+    );
+
+    if (employeeResult.rows.length === 0) {
+      res.status(404).json({ message: 'Employee not found' });
+      return;
+    }
     const jobsResult = await pool.query(
       `SELECT jp.job_posting_id, jp.job_title, jp.job_description, jp.city_id, c.name AS city_name, jp.required_experience, jp.created_at, e.*, jpl.*, pl.*
        FROM job_posting jp
@@ -89,8 +99,19 @@ export const listAllJobs = async (req: AuthRequest, res: Response) => {
       });
     });
 
+    const mappedResult = jobs.map(async (job) => {
+      const jobApplied = await pool.query(
+        'SELECT * FROM application WHERE job_posting_id = $1 AND employee_id = $2',
+        [job.job_posting_id, employeeResult.rows[0]?.employee_id]
+      );
+      return {
+        ...job,
+        applied: jobApplied.rows.length > 0,
+      };
+    });
+
     res.status(200).json({
-      jobs,
+      jobs: await Promise.all(mappedResult),
     });
   } catch (error) {
     console.error('Error listing all jobs:', error);
@@ -156,6 +177,7 @@ export const searchJobs = async (req: AuthRequest, res: Response) => {
     values.push(limit, offset);
 
     const result = await client.query(query, values);
+
     res.status(200).json(result.rows);
     return;
   } catch (error) {
@@ -335,6 +357,84 @@ export const updateJobPosting = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error('Error updating job posting:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const getEmployerJobs = async (req: AuthRequest, res: Response) => {
+  try {
+    const user_id = req.user?.user_id;
+
+    const employerResult = await pool.query(
+      'SELECT employer_id FROM employer WHERE user_id = $1',
+      [user_id]
+    );
+    const employer_id = employerResult.rows[0].employer_id;
+
+    const jobsResult = await pool.query(
+      'SELECT jp.job_posting_id, jp.job_title, jp.job_description, jp.city_id, c.name AS city_name, jp.required_experience, jp.created_at, e.company_name AS employer_name ' +
+        'FROM job_posting jp ' +
+        'JOIN employer e ON jp.employer_id = e.employer_id ' +
+        'JOIN city c ON jp.city_id = c.city_id ' +
+        'WHERE jp.employer_id = $1 ' +
+        'ORDER BY jp.created_at DESC',
+      [employer_id]
+    );
+
+    res.status(200).json({
+      message: 'Jobs posted by employer fetched successfully',
+      jobs: jobsResult.rows,
+    });
+  } catch (error) {
+    console.error('Error fetching jobs posted by employer:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const getJobById = async (req: AuthRequest, res: Response) => {
+  const { job_posting_id } = req.params;
+
+  try {
+    const employeeResult = await pool.query(
+      'SELECT * FROM employee WHERE user_id = $1',
+      [req.user?.user_id]
+    );
+    const employee = employeeResult.rows[0];
+
+    if (!employee) {
+      res.status(400).json({ message: 'Employee not found' });
+      return;
+    }
+    const jobResult = await pool.query(
+      `SELECT jp.*, c.name AS city_name, e.company_name 
+       FROM job_posting jp
+       JOIN city c ON jp.city_id = c.city_id
+       JOIN employer e ON jp.employer_id = e.employer_id
+       WHERE jp.job_posting_id = $1`,
+      [job_posting_id]
+    );
+
+    if (jobResult.rows.length === 0) {
+      res.status(404).json({ message: 'Job not found' });
+      return;
+    }
+
+    const job = jobResult.rows[0];
+
+    const applicationResult = await pool.query(
+      'SELECT * FROM application WHERE job_posting_id = $1 AND employee_id = $2',
+      [job_posting_id, employee.employee_id]
+    );
+
+    job.applied = applicationResult.rows.length > 0;
+    job.applicationStatus = applicationResult.rows[0]?.status;
+
+    res.status(200).json({
+      message: 'Job fetched successfully',
+      job: job,
+    });
+  } catch (error) {
+    console.error('Error fetching job:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };

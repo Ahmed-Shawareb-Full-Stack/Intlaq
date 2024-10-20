@@ -10,6 +10,16 @@ interface AuthRequest extends Request {
   };
 }
 
+export const getProgrammingLanguages = async (req: Request, res: Response) => {
+  const languageResult = await pool.query(
+    'SELECT * FROM programming_languages'
+  );
+
+  res.status(200).json({
+    languages: languageResult.rows,
+  });
+};
+
 export const applyForJob = async (req: AuthRequest, res: Response) => {
   const { job_id } = req.params;
   const userType = req.user?.type;
@@ -75,12 +85,12 @@ export const manageApplication = async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    const job_id = application.rows[0].job_id;
+    const job_id = application.rows[0].job_posting_id;
 
     const jobResult = await pool.query(
       `SELECT jp.*, e.user_id as employer_user_id 
        FROM job_posting jp 
-       JOIN employers e ON jp.employer_id = e.employer_id 
+       JOIN employer e ON jp.employer_id = e.employer_id 
        WHERE jp.job_posting_id = $1`,
       [job_id]
     );
@@ -138,7 +148,7 @@ export const listJobApplications = async (req: AuthRequest, res: Response) => {
     const applicationsResult = await pool.query(
       `SELECT a.application_id, a.status, a.applied_at, 
               emp.*, 
-              pl.*, u.*
+              pl.*, pl.name as language, u.*
        FROM application a
        JOIN employee emp ON a.employee_id = emp.employee_id
        JOIN "user" u ON emp.user_id = u.user_id
@@ -148,6 +158,8 @@ export const listJobApplications = async (req: AuthRequest, res: Response) => {
        ORDER BY a.applied_at DESC`,
       [job_id]
     );
+
+    log(applicationsResult.rows);
 
     const applications: any[] = [];
 
@@ -161,7 +173,7 @@ export const listJobApplications = async (req: AuthRequest, res: Response) => {
         if (index !== -1) {
           applications[index].languages.push({
             language_id: row.language_id,
-            name: row.name,
+            name: row.language,
           });
           return;
         }

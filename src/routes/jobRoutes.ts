@@ -1,6 +1,8 @@
 import express from 'express';
 import { authenticateJWT, authorizeRoles } from '../middleware/auth';
 import {
+  getEmployerJobs,
+  getJobById,
   listAllJobs,
   postJob,
   searchJobs,
@@ -12,6 +14,13 @@ import { validateJobUpdate } from '../middleware/update-job-posting';
 const router = express.Router();
 
 router.get('/search', authenticateJWT, authorizeRoles('EMPLOYEE'), searchJobs);
+
+router.get(
+  '/jobs-posted',
+  authenticateJWT,
+  authorizeRoles('EMPLOYER'),
+  getEmployerJobs
+);
 
 router.post(
   '/',
@@ -30,5 +39,12 @@ router.put(
 );
 
 router.get('/', authenticateJWT, authorizeRoles('EMPLOYEE'), listAllJobs);
+
+router.get(
+  '/:job_posting_id',
+  authenticateJWT,
+  authorizeRoles('EMPLOYEE'),
+  getJobById
+);
 
 export default router;

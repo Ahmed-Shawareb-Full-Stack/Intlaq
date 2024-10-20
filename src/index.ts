@@ -5,6 +5,7 @@ import jobRoutes from './routes/jobRoutes';
 import profileRoutes from './routes/profileRoutes';
 import applicationRoutes from './routes/applicationRoutes';
 import locationRoutes from './routes/locationRoutes';
+import userRoutes from './routes/userRoutes';
 const cors = require('cors');
 
 dotenv.config();
@@ -23,7 +24,7 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/profiles', profileRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/locations', locationRoutes);
-
+app.use('/api/users', userRoutes);
 app.use(
   (
     err: any,

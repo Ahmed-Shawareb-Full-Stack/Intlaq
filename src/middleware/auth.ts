@@ -51,6 +51,7 @@ export const authenticateJWT = (
 
 export const authorizeRoles = (...roles: ('EMPLOYER' | 'EMPLOYEE')[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
+    log(req.user);
     if (!req.user || !roles.includes(req.user.type)) {
       res.sendStatus(403);
       return;

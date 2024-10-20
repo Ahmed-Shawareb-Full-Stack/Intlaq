@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   applyForJob,
+  getProgrammingLanguages,
   listEmployeeApplications,
   listJobApplications,
   manageApplication,
@@ -9,6 +10,8 @@ import { authenticateJWT, authorizeRoles } from '../middleware/auth';
 
 const router = express.Router();
 
+router.get('/languages', getProgrammingLanguages);
+
 router.post(
   '/apply/:job_id',
   authenticateJWT,
@@ -16,7 +19,7 @@ router.post(
   applyForJob
 );
 
-router.put(
+router.post(
   '/manage/:application_id',
   authenticateJWT,
   authorizeRoles('EMPLOYER'),

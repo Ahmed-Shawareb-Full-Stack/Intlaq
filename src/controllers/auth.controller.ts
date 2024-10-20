@@ -66,7 +66,7 @@ export const createEmployer = async (
 
     await client.query('COMMIT');
 
-    res.status(201).json({ token });
+    res.status(201).json({ token, user: userResult.rows[0] });
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error registering employee:', error);
@@ -179,7 +179,7 @@ export const registerEmployee = async (
       `INSERT INTO "user"
         (user_id, name, type, email, hashed_password)
        VALUES ($1, $2, $3, $4, $5)
-       RETURNING user_id`,
+       RETURNING *`,
       [userId, name, 'EMPLOYEE', email, hashedPassword]
     );
     const user_id = userResult.rows[0].user_id;
@@ -218,7 +218,7 @@ export const registerEmployee = async (
 
     await client.query('COMMIT');
 
-    res.status(201).json({ token });
+    res.status(201).json({ token, user: userResult.rows[0] });
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error registering employee:', error);
@@ -252,24 +252,36 @@ export const loginEmployee = async (
       return;
     }
 
-    const employeeResult = await pool.query(
-      'SELECT * FROM employee WHERE user_id = $1',
-      [user.user_id]
-    );
-    const employee = employeeResult.rows[0];
+    let result;
 
-    if (!employee) {
-      res.status(400).json({ message: 'Employee not found' });
+    if (user.type === 'EMPLOYEE') {
+      const employeeResult = await pool.query(
+        'SELECT * FROM employee WHERE user_id = $1',
+        [user.user_id]
+      );
+      result = employeeResult.rows[0];
+    }
+
+    if (user.type === 'EMPLOYER') {
+      const employerResult = await pool.query(
+        'SELECT * FROM employer WHERE user_id = $1',
+        [user.user_id]
+      );
+      result = employerResult.rows[0];
+    }
+
+    if (!result) {
+      res.status(400).json({ message: 'not found profile' });
       return;
     }
 
     const token = jwt.sign(
-      { user_id: employee.user_id },
+      { user_id: result.user_id },
       process.env.JWT_SECRET as string,
       { expiresIn: '30d' }
     );
 
-    res.status(200).json({ token });
+    res.status(200).json({ token, user: userResult.rows[0] });
   } catch (error) {
     console.error('Error logging in:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -317,7 +329,7 @@ export const loginEmployer = async (
       { expiresIn: '30d' }
     );
 
-    res.status(200).json({ token });
+    res.status(200).json({ token, user: userResult.rows[0] });
   } catch (error) {
     console.error('Error logging in:', error);
     res.status(500).json({ message: 'Internal server error' });
